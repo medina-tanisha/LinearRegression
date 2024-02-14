@@ -1,0 +1,81 @@
+---
+title: "Project 1"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  html_notebook: default
+---
+
+**Data Set**
+    The data set chosen has been taken from Kaggle: https://www.kaggle.com/datasets/souvikahmed071/social-media-and-mental-health
+    This is significant data to inspect because media usage is a big part of everyones life and it's important to see the effect it may have on                different groups of people.
+
+```{r}
+library(yarrr)
+library(readr)
+library(mosaic)
+library(tibble)
+```
+```{r}
+sm <- (smmh) %>% na.omit()
+sm
+```
+```{r}
+sm <- sm %>% mutate(gender = sm$`2. Gender`, age = sm$`1. What is your age?`, status = sm$`3. Relationship Status`, occupation = sm$`4. Occupation Status`, media = sm$`6. Do you use social media?`, schoolType = sm$`5. What type of organizations are you affiliated with?`, avg_time = sm$`8. What is the average time you spend on social media every day?`, specific = sm$`9. How often do you find yourself using Social media without a specific purpose?` ) %>%
+            select(gender, age, status, occupation, media, schoolType, avg_time, specific)
+sm #Here I have chosen to rename the columns for easier access
+```
+```{r}
+sm <- sm %>% mutate(gender_new = factor(case_when(gender == "Male" ~ 'male',
+                                                          gender == "Female" ~ 'female',
+                                                              gender != "female" ~ 'other',
+                                                                  gender != "male" ~ 'other')))
+sm 
+```
+```{r}
+sm <- sm %>% mutate(status_new = factor(case_when(status == "Single" ~ 'single',
+                                                          status == "Divorced" ~ 'single',
+                                                              gender != "Divorced" ~ 'taken',
+                                                                  gender != "Single" ~ 'taken')))
+sm #I have created two new columns so that I can work with a smaller amount of options to use in an interaction
+```
+```{r}
+sm_int <- sm %>% mutate(group = interaction(gender_new, status_new, media))
+sm_int #Here is a categorical variable with two values
+```
+```{r}
+pirateplot( specific ~ group, data = sm_int) #Most of what we will be observing are groups that do have a form of media because most people in this data set have marked yes
+```
+```{r}
+lm <- lm(specific ~ group, data=sm_int)
+anova(lm)
+```
+**Results**
+  The code above shows an anova test that has been done with a categorical variable named group that consists of the values: gender, relationship status and if they consume media. The specific column refers to how many hours they consume media. We are testing to see if...
+  Null Hypothesis: There is no significant difference between the specific amount of hours of media consumed to at least one of the values in group.
+  Alternative Hypothesis: There is a significant difference between the specific amount of hours of media consumed to at least on of the values in group.
+  We concluded with a p-value < 0.05 so we accept our Null Hypothesis and reject the Alternative.
+    
+    
+    
+    
+  **Non-Parametric Version to confirm results:**
+```{r}
+N <- 1000
+Tstar <- matrix(NA, nrow = N)
+for (b in (1:N)){ #We are shuffling the group to the specific variable and producing a result of each anova test result 1000 times
+  Tstar[b] <- anova(lm(specific ~ shuffle(group), data=sm_int))[1,4]
+}
+```
+```{r}
+tibble(Tstar) %>% ggplot(aes(x = Tstar)) + 
+  geom_histogram(aes(y = ..ncount..), bins=25, col=1, fill='orange') + 
+  geom_vline(xintercept = c(0.4402095 , 1.7128723 ), col="blue", lwd=2) 
+```
+```{r}
+ 1 - pdata(Tstar, 0.04406)
+```
+```{r}
+quantile(Tstar, c(0.1, 0.9) ) #Our 90 percentile confidence interval numbers which is plugged into the bar graph above
+```
